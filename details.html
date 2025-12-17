@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>📖 Book Details</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+  /* Body & Background */
+  body {
+    background: linear-gradient(-45deg, #1c1f28, #2c303e, #1a2233, #252c3e);
+    background-size: 400% 400%;
+    font-family: 'Roboto', sans-serif;
+    color: #fff;
+    margin: 0;
+    padding: 40px;
+    text-align: center;
+    animation: gradientShift 15s ease infinite;
+  }
+
+  @keyframes gradientShift {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+  }
+
+  /* Container Card */
+  #details {
+    background: rgba(20, 25, 40, 0.85);
+    border-radius: 20px;
+    padding: 35px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    width: 90%;
+    max-width: 800px;
+    margin: auto;
+    opacity: 0;
+    transform: translateY(50px);
+    animation: fadeInUp 1s forwards;
+  }
+
+  @keyframes fadeInUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Headings */
+  h1 {
+    color: #00eaff;
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px #00eaff;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    color: #00ffff;
+    font-size: 2rem;
+    margin-bottom: 15px;
+    text-shadow: 0 0 8px #00ffff;
+  }
+
+  /* Paragraphs */
+  p {
+    color: #ccefff;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+  }
+
+  /* Links */
+  a {
+    color: #00d4ff;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s ease;
+  }
+
+  a:hover {
+    color: #00ffff;
+    text-shadow: 0 0 8px #00ffff;
+    transform: scale(1.05);
+  }
+
+  /* Archive Link Button */
+  .archive-link {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: linear-gradient(45deg, #00eaff, #00d4ff);
+    color: #1c1f28;
+    font-weight: bold;
+    transition: all 0.3s ease;
+  }
+
+  .archive-link:hover {
+    transform: scale(1.05) rotate(-2deg);
+    box-shadow: 0 10px 20px rgba(0, 212, 255, 0.5);
+  }
+
+  /* Back link */
+  .back-link {
+    display: inline-block;
+    margin-top: 20px;
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>📖 Book Details</h1>
+<div id="details"><p>Loading...</p></div>
+
+<script>
+function getParam(name) {
+  const url = new URL(window.location.href);
+  return url.searchParams.get(name);
+}
+
+async function loadDetails() {
+  const id = getParam("id");
+  const source = getParam("source");
+  const container = document.getElementById("details");
+
+  try {
+    let info = {};
+    if (source === "openlibrary") {
+      const res = await fetch(`https://openlibrary.org/works/${id}.json`);
+      info = await res.json();
+    } else if (source === "google") {
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${id}`);
+      info = await res.json();
+    }
+
+    const title = info.title || info.volumeInfo?.title || "Unknown";
+    const authors = info.authors ? info.authors.map(a => a.name).join(", ") :
+                    info.volumeInfo?.authors?.join(", ") || "Unknown";
+    const published = info.first_publish_date || info.volumeInfo?.publishedDate || "Unknown";
+    const desc = info.description?.value || info.description || info.volumeInfo?.description || "No description available";
+
+    let archiveLink = "";
+    if (source === "openlibrary") {
+      archiveLink = `https://openlibrary.org/works/${id}`;  
+    } else if (info.volumeInfo?.industryIdentifiers?.length) {
+      const isbn = info.volumeInfo.industryIdentifiers[0].identifier;
+      archiveLink = `https://archive.org/advancedsearch.php?q=isbn%3A${isbn}&fl[]=identifier&output=json`;
+    }
+
+    container.innerHTML = `
+      <h2>${title}</h2>
+      <p><strong>Author:</strong> ${authors}</p>
+      <p><strong>Published:</strong> ${published}</p>
+      <p>${desc}</p>
+      ${archiveLink ? `<p><a class="archive-link" href="${archiveLink}" target="_blank">📘 View on Archive.org</a></p>` : ''}
+      <p class="back-link"><a href="index.html">⬅️ Back to Search</a></p>
+    `;
+  } catch (err) {
+    container.innerHTML = "<p>Could not load details.</p>";
+  }
+}
+
+loadDetails();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>📚 Book Explorer</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  /* Intro animation styles */
+  #intro {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(145deg, #1c1f28, #2c303e);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+    color: #00fff7;
+    font-size: 3rem;
+    text-shadow: 0 0 12px #00ffff5c, 0 0 24px #00ffff4a;
+    animation: fadeOut 2s ease 2s forwards;
+  }
+
+  #intro img {
+    width: 120px;
+    margin-bottom: 20px;
+    animation: pop 2s ease forwards;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes fadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; visibility: hidden; }
+  }
+
+  /* Main page styles */
+  body {
+    background: linear-gradient(145deg, #1c1f28, #2c303e);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #fff;
+    margin: 0;
+    padding: 40px;
+    text-align: center;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 3rem;
+    text-shadow: 0 0 12px #00ffff5c, 0 0 24px #00ffff4a;
+    margin-bottom: 20px;
+  }
+
+  input, button {
+    font-size: 18px;
+    padding: 14px 20px;
+    margin: 10px 5px;
+    border-radius: 12px;
+    border: none;
+    outline: none;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: 0.3s ease;
+  }
+
+  input {
+    width: 60%;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  button {
+    background: linear-gradient(145deg, #00fff771, #00d5ff35);
+    color: #111;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 20px #00fff74d, 0 0 40px #00d5ff54;
+  }
+
+  button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px #00fff73e, 0 0 60px #00d5ff41;
+  }
+
+  #results {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .book-card {
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 20px;
+    width: 80%;
+    max-width: 700px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .book-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.6), 0 0 30px #00fff7;
+  }
+
+  .book-card img {
+    width: 100px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,255,255,0.5);
+    transition: transform 0.3s;
+  }
+
+  .book-card img:hover { transform: scale(1.05); }
+
+  .book-card h3 {
+    margin: 0;
+    color: #00fff7;
+    text-shadow: 0 0 8px #00fff7;
+  }
+
+  .book-card p { margin: 5px 0; color: #ccefff; }
+</style>
+</head>
+<body>
+
+<!-- Intro Animation -->
+<div id="intro">
+  <img src="favicon.png" alt="Book Explorer Logo">
+  📚 Book Explorer
+  <!-- Audio -->
+  <audio id="introSound" src="sound.wav" preload="auto"></audio>
+</div>
+
+<h1>📚 Book Explorer</h1>
+<input type="text" id="bookName" placeholder="Type a book name...">
+<button onclick="searchBooks()">🔍 Find Books</button>
+
+<div id="results"></div>
+
+<script>
+  // Play intro sound and hide intro after animation
+  window.addEventListener('load', () => {
+    const introSound = document.getElementById('introSound');
+    introSound.play().catch(() => {
+      console.log("User interaction required to play sound.");
+    });
+
+    setTimeout(() => {
+      document.getElementById('intro').style.display = 'none';
+    }, 4000); // total animation time
+  });
+
+  async function searchBooks() {
+    const query = encodeURIComponent(document.getElementById('bookName').value);
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '<p>Searching... 🔎</p>';
+
+    try {
+      const olResponse = await fetch(`https://openlibrary.org/search.json?q=${query}`);
+      const olData = await olResponse.json();
+
+      const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}`);
+      const gbData = await gbResponse.json();
+
+      resultsDiv.innerHTML = "";
+      const books = [
+        ...(olData.docs || []).slice(0, 4).map(b => ({
+          id: b.key.replace("/works/", "").replace("/books/", ""),
+          source: "openlibrary",
+          title: b.title,
+          author: b.author_name ? b.author_name.join(', ') : 'Unknown',
+          cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : null,
+        })),
+        ...(gbData.items || []).slice(0, 4).map(b => ({
+          id: b.id,
+          source: "google",
+          title: b.volumeInfo.title,
+          author: (b.volumeInfo.authors || []).join(', '),
+          cover: b.volumeInfo.imageLinks?.thumbnail,
+        }))
+      ];
+
+      if (!books.length) {
+        resultsDiv.innerHTML = '<p>No results found 😕</p>';
+        return;
+      }
+
+      books.forEach(book => {
+        resultsDiv.innerHTML += `
+          <div class="book-card" onclick="location.href='details.html?id=${book.id}&source=${book.source}'">
+            ${book.cover ? `<img src="${book.cover}">` : ''}
+            <div>
+              <h3>${book.title}</h3>
+              <p><strong>Author:</strong> ${book.author}</p>
+            </div>
+          </div>
+        `;
+      });
+
+    } catch (err) {
+      resultsDiv.innerHTML = '<p>Error fetching books!</p>';
+      console.error(err);
+    }
+  }
+</script>
+
+</body>
+</html>
